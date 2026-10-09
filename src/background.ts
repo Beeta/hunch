@@ -7,7 +7,10 @@ import { shortcutLabel } from "./shared/shortcut";
 async function toggle(tabId: number | undefined) {
   if (tabId === undefined) return;
   const { provider } = await loadSettings();
-  await requestApiAccess(provider);
+  // Chrome rejects permissions.request outside the synchronous user gesture that
+  // triggered this, and awaiting storage above already leaves it. Manifest host
+  // permissions are granted at install, so only ask when one is actually missing.
+  if (!(await hasApiAccess(provider))) await requestApiAccess(provider).catch(() => false);
   if (!(await ensureContentScript(tabId))) return unavailable(tabId);
   await sendToTab(tabId, { type: "toggle" });
 }
